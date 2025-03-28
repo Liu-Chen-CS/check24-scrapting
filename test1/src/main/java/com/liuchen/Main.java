@@ -6,6 +6,8 @@ import java.io.IOException;
 import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
 import java.util.*;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 public class Main {
 
@@ -110,9 +112,13 @@ public class Main {
 
             // 提取价格捕获器
             List<ElementHandle> priceCatchers = article.querySelectorAll("div.result-row__priceCatcher");
-            List<String> priceCatcherNames = new ArrayList<>();
+            Map<String, String> priceCatcherMap = new HashMap<>();
             for (ElementHandle priceCatcher : priceCatchers) {
-                priceCatcherNames.add(priceCatcher.innerText());
+                String priceCatcherName = priceCatcher.innerText();
+                if(!priceCatcherName.isEmpty()){
+                    String[] priceCatcherNameArr = priceCatcherName.trim().replaceAll("[\u00AD\u200B\u2010-\u2015]", "").split(":");
+                    priceCatcherMap.put(priceCatcherNameArr[0], priceCatcherNameArr[1].trim());
+                }
             }
 
             // 提取限时优惠
@@ -121,19 +127,42 @@ public class Main {
                     limitedTimeCatchers.innerText().trim().isEmpty() ? "Empty" : limitedTimeCatchers.innerText();
 
             // 提取次要捕获器行
+//            List<ElementHandle> resultRowSecondaryCatcherElement = article.querySelectorAll("div.result-row__secondaryCatcherRow *");
+//            List<String> tooltipContents = new ArrayList<>();
+//            for (ElementHandle childElement : resultRowSecondaryCatcherElement) {
+//                ElementHandle tooltipContent = childElement.querySelector("div.c24-tooltip-content");
+//                if (tooltipContent != null && !tooltipContent.innerText().trim().isEmpty()) {
+//                    String res = tooltipContent.innerText().replaceAll("\\s+", " ").trim();
+//                    tooltipContents.add(res);
+//                }
+//            }
+
             List<ElementHandle> resultRowSecondaryCatcherElement = article.querySelectorAll("div.result-row__secondaryCatcherRow *");
-            List<String> tooltipContents = new ArrayList<>();
+            Map<String, String> tooltipContentMap = new HashMap<>();
             for (ElementHandle childElement : resultRowSecondaryCatcherElement) {
                 ElementHandle tooltipContent = childElement.querySelector("div.c24-tooltip-content");
                 if (tooltipContent != null && !tooltipContent.innerText().trim().isEmpty()) {
-                    String res = tooltipContent.innerText().replaceAll("\\s+", " ").trim();
-                    tooltipContents.add(res);
+                    String text = tooltipContent.innerText().trim();
+
+                    // 1. 按第一个冒号分割 key 和 value
+                    int colonIndex = text.indexOf(':');
+                    if (colonIndex != -1) {
+                        String key = text.substring(0, colonIndex).trim();
+                        String value = text.substring(colonIndex + 1).trim();
+
+                        // 2. 清理 value 部分
+                        value = value
+                                .replaceAll("\\s+", " ")          // 合并多个空格
+                                .replaceAll("\\s*\\n\\s*", ": "); // 换行替换为冒号+空格
+
+                        tooltipContentMap.put(key, value);
+                    }
                 }
             }
 
             // 提取资费特征
             List<ElementHandle> tariffFeatures = article.querySelectorAll("div.result-row__tariffFeatures div.tariff-feature");
-            Map<String, String> c24TooltipTriggerMap = new LinkedHashMap<>();
+            Map<String, String> c24TooltipTriggerMap = new HashMap<>();
             for (ElementHandle triggerElement : tariffFeatures) {
                 ElementHandle firstElement = triggerElement.querySelector("span.tariff-feature__inner--first");
                 ElementHandle secondElement = triggerElement.querySelector("span.tariff-feature__inner--second");
@@ -146,31 +175,33 @@ public class Main {
             ElementHandle priceElement = article.querySelector("div.result-row__prices div.tariff-price__price");
             String price = priceElement != null ? priceElement.innerText().trim() : "N/A";
 
-
             data.put("品牌名", brandName);
             data.put("等级", grade);
             data.put("评分", rating);
             data.put("Tariff", tariffBrandName);
             data.put("价格",price);
             data.put("限时优惠",limitedTimeCatcherText);
+            data.putAll(priceCatcherMap);
             data.putAll(c24TooltipTriggerMap);
+            data.putAll(tooltipContentMap);
 
 
             // 打印提取的信息
-            System.out.println("*********************************" + "Article_" + index + "*********************************");
-
-            System.out.println("品牌名: " + brandName + " | 等级: " + grade + " | 评分: " + rating);
-            System.out.println("Tariff: " + tariffBrandName);
-            System.out.println("价格捕获器: " + priceCatcherNames);
-            System.out.println("限时优惠: " + limitedTimeCatcherText);
-            System.out.println("价格: " + price);
-
-            System.out.println("资费特征:");
-            c24TooltipTriggerMap.forEach((k, v) -> System.out.println("  " + k + ": " + v));
-
-            System.out.println("工具提示内容:");
-            tooltipContents.forEach(System.out::println);
-            System.out.println();
+//            System.out.println("*********************************" + "Article_" + index + "*********************************");
+//            System.out.println("品牌名: " + brandName + " | 等级: " + grade + " | 评分: " + rating);
+//            System.out.println("Tariff: " + tariffBrandName);
+//            System.out.println("限时优惠: " + limitedTimeCatcherText);
+//            System.out.println("价格: " + price);
+//
+//            System.out.println("资费特征:");
+//            c24TooltipTriggerMap.forEach((k, v) -> System.out.println("  " + k + v));
+//
+//            System.out.println("价格捕获器: ");
+//            priceCatcherMap.forEach((k,v)-> System.out.println("  " + k + ": " + v));
+//
+//            System.out.println("工具提示内容:");
+//            tooltipContentMap.forEach((k,v)-> System.out.println("  " + k + ": " + v));
+//            System.out.println();
         } catch (Exception e) {
             System.err.println("提取文章信息时出错: " + e.getMessage());
         }
