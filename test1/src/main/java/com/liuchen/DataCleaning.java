@@ -1,9 +1,6 @@
 package com.liuchen;
 
-import java.util.HashSet;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
+import java.util.*;
 
 public class DataCleaning {
     public static Map<String, List<Map<String,String>>> RemovingNull(Map<String, List<Map<String,String>>> cityDataMap) {
@@ -22,7 +19,7 @@ public class DataCleaning {
                 boolean allNA = true;
                 for (Map<String, String> article : articles) {
                     String value = article.get(column);
-                    if (value != null && !value.equals("N/A")) {
+                    if (value != null && !value.equals("N/A") && !value.equalsIgnoreCase("empty")) {
                         allNA = false;
                         break;  // 只要有一个不是N/A，就不用继续检查该列
                     }
