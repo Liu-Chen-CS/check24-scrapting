@@ -6,18 +6,16 @@ import java.io.IOException;
 import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
 import java.util.*;
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
 
 public class Main {
 
     public static void main(String[] args) {
 
-        List<Map<String, String>> allData = new ArrayList<>();
+        Map<String, List<Map<String, String>>> cityDataMap = new LinkedHashMap<>();
 
         // 邮编列表
         List<Postcode> postcodes = Arrays.asList(
-                new Postcode("10115", "Berlin"),
+                new Postcode("65604", "Elz"),
                 new Postcode("80331", "München")
         );
 
@@ -26,8 +24,12 @@ public class Main {
             Browser browser = playwright.chromium().launch(new BrowserType.LaunchOptions().setHeadless(false));
 
             for (Postcode postcode : postcodes) {
+                String city = postcode.city;
+                String code = postcode.code;
                 System.out.println("------------------------");
-                System.out.println("正在处理邮编: " + postcode.code + " (" + postcode.city + ")");
+                System.out.println("正在处理邮编: " + code + " (" + city + ")");
+
+                cityDataMap.putIfAbsent(city, new ArrayList<>());
 
                 // 为每个邮编创建新页面
                 try (Page page = browser.newPage()) {
@@ -69,7 +71,7 @@ public class Main {
                     // 提取每个文章的信息
                     for (int i = 0; i < articles.size(); i++) {
                         Map<String, String> articleData = extractArticleInfo(articles.get(i), i+1);
-                        allData.add(articleData);
+                        cityDataMap.get(city).add(articleData);
                     }
 
                     // 处理完成后等待一会儿
@@ -84,9 +86,12 @@ public class Main {
             System.out.println("所有邮编处理完成, 关闭浏览器");
             browser.close();
 
+            //数据清理
+            Map<String, List<Map<String, String>>> cityDataMapCleaned = DataCleaning.RemovingNull(cityDataMap);
+
             // 导出到Excel
             try {
-                ExcelGenerator.generateExcel(allData, "爬虫结果.xlsx");
+                ExcelGenerator.generateExcelWithSheets(cityDataMapCleaned, "爬虫结果.xlsx");
                 System.out.println("Excel文件生成成功！");
             } catch (IOException e) {
                 System.err.println("生成Excel文件时出错: " + e.getMessage());
@@ -112,7 +117,7 @@ public class Main {
 
             // 提取价格捕获器
             List<ElementHandle> priceCatchers = article.querySelectorAll("div.result-row__priceCatcher");
-            Map<String, String> priceCatcherMap = new HashMap<>();
+            Map<String, String> priceCatcherMap = new LinkedHashMap<>();
             for (ElementHandle priceCatcher : priceCatchers) {
                 String priceCatcherName = priceCatcher.innerText();
                 if(!priceCatcherName.isEmpty()){
@@ -126,19 +131,8 @@ public class Main {
             String limitedTimeCatcherText = limitedTimeCatchers == null ? "N/A" :
                     limitedTimeCatchers.innerText().trim().isEmpty() ? "Empty" : limitedTimeCatchers.innerText();
 
-            // 提取次要捕获器行
-//            List<ElementHandle> resultRowSecondaryCatcherElement = article.querySelectorAll("div.result-row__secondaryCatcherRow *");
-//            List<String> tooltipContents = new ArrayList<>();
-//            for (ElementHandle childElement : resultRowSecondaryCatcherElement) {
-//                ElementHandle tooltipContent = childElement.querySelector("div.c24-tooltip-content");
-//                if (tooltipContent != null && !tooltipContent.innerText().trim().isEmpty()) {
-//                    String res = tooltipContent.innerText().replaceAll("\\s+", " ").trim();
-//                    tooltipContents.add(res);
-//                }
-//            }
-
             List<ElementHandle> resultRowSecondaryCatcherElement = article.querySelectorAll("div.result-row__secondaryCatcherRow *");
-            Map<String, String> tooltipContentMap = new HashMap<>();
+            Map<String, String> tooltipContentMap = new LinkedHashMap<>();
             for (ElementHandle childElement : resultRowSecondaryCatcherElement) {
                 ElementHandle tooltipContent = childElement.querySelector("div.c24-tooltip-content");
                 if (tooltipContent != null && !tooltipContent.innerText().trim().isEmpty()) {
@@ -162,13 +156,17 @@ public class Main {
 
             // 提取资费特征
             List<ElementHandle> tariffFeatures = article.querySelectorAll("div.result-row__tariffFeatures div.tariff-feature");
-            Map<String, String> c24TooltipTriggerMap = new HashMap<>();
+            Map<String, String> c24TooltipTriggerMap = new LinkedHashMap<>();
             for (ElementHandle triggerElement : tariffFeatures) {
                 ElementHandle firstElement = triggerElement.querySelector("span.tariff-feature__inner--first");
                 ElementHandle secondElement = triggerElement.querySelector("span.tariff-feature__inner--second");
-                String firstText = firstElement != null ? firstElement.innerText().trim() : "N/A";
                 String secondText = secondElement != null ? secondElement.innerText().trim() : "N/A";
-                c24TooltipTriggerMap.put(firstText, secondText);
+                if(firstElement != null){
+                    String firstElementText = firstElement.innerText().trim();
+                    if(!firstElementText.isEmpty()){
+                        c24TooltipTriggerMap.put(firstElementText, secondText);;
+                    }
+                }
             }
 
             // 提取价格
@@ -184,24 +182,6 @@ public class Main {
             data.putAll(priceCatcherMap);
             data.putAll(c24TooltipTriggerMap);
             data.putAll(tooltipContentMap);
-
-
-            // 打印提取的信息
-//            System.out.println("*********************************" + "Article_" + index + "*********************************");
-//            System.out.println("品牌名: " + brandName + " | 等级: " + grade + " | 评分: " + rating);
-//            System.out.println("Tariff: " + tariffBrandName);
-//            System.out.println("限时优惠: " + limitedTimeCatcherText);
-//            System.out.println("价格: " + price);
-//
-//            System.out.println("资费特征:");
-//            c24TooltipTriggerMap.forEach((k, v) -> System.out.println("  " + k + v));
-//
-//            System.out.println("价格捕获器: ");
-//            priceCatcherMap.forEach((k,v)-> System.out.println("  " + k + ": " + v));
-//
-//            System.out.println("工具提示内容:");
-//            tooltipContentMap.forEach((k,v)-> System.out.println("  " + k + ": " + v));
-//            System.out.println();
         } catch (Exception e) {
             System.err.println("提取文章信息时出错: " + e.getMessage());
         }

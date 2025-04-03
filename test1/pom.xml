@@ -22,15 +22,31 @@
             <version>1.18.34</version>
             <scope>provided</scope>
         </dependency>
+        <!-- Apache POI 核心库 -->
         <dependency>
             <groupId>org.apache.poi</groupId>
             <artifactId>poi</artifactId>
-            <version>4.1.2</version>
+            <version>5.2.3</version>  <!-- 确保是最新版本 -->
         </dependency>
+        <!-- Apache POI 处理 Excel（.xlsx）所需的扩展 -->
         <dependency>
             <groupId>org.apache.poi</groupId>
             <artifactId>poi-ooxml</artifactId>
-            <version>4.1.2</version>
+            <version>5.2.3</version>
+        </dependency>
+
+        <!-- ooxml-schemas（用于解析 STCfType 相关的 XML 结构） -->
+        <dependency>
+            <groupId>org.apache.poi</groupId>
+            <artifactId>poi-ooxml-schemas</artifactId>
+            <version>4.1.2</version>  <!-- 这个版本适用于 POI 5.x -->
+        </dependency>
+
+        <!-- XMLBeans（POI 依赖的 XML 解析库） -->
+        <dependency>
+            <groupId>org.apache.xmlbeans</groupId>
+            <artifactId>xmlbeans</artifactId>
+            <version>5.1.1</version>
         </dependency>
     </dependencies>
 
