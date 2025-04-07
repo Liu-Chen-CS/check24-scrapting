@@ -49,7 +49,7 @@ public class Main {
                     page.waitForSelector("div.result__items", new Page.WaitForSelectorOptions().setTimeout(30000));
 
                     System.out.println("------------------------");
-                    for (int i = 0; i < 2; i++) {
+                    for (int i = 0; i < 60; i++) {
                         System.out.println("页面滚动: " + i + "次");
                         page.evaluate("window.scrollBy(0, window.innerHeight)");
                         page.waitForTimeout(2000); // 等待2秒
